@@ -1,9 +1,22 @@
 #include "pilot.h"
 #include <iostream>
 
-// Constructor using an initialization list
 Pilot::Pilot(std::string name, int skill)
-    : name_(name), skill_(skill), fatigue_(0), missions_(0) {}
+    : fatigue_(0), missions_(0) {
+    if (name.empty()) {
+        name_ = "Unnamed";
+    } else {
+        name_ = name;
+    }
+
+    if (skill < 1) {
+        skill_ = 1;
+    } else if (skill > 100) {
+        skill_ = 100;
+    } else {
+        skill_ = skill;
+    }
+}
 
 void Pilot::rest() {
     fatigue_ -= 30;
@@ -25,6 +38,23 @@ void Pilot::print() const {
     std::cout << name_ << " | skill " << skill_ 
               << " | fatigue " << fatigue_ 
               << " | missions " << missions_ << "\n";
+}
+
+bool Pilot::set_name(const std::string& name) {
+    if (name.empty()) {
+        return false;
+    }
+    name_ = name;
+    return true;
+}
+
+void Pilot::change_skill(int change) {
+    skill_ += change;
+    if (skill_ < 1) {
+        skill_ = 1;
+    } else if (skill_ > 100) {
+        skill_ = 100;
+    }
 }
 
 // Getters
