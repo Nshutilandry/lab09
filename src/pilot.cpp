@@ -1,24 +1,34 @@
 #include "pilot.h"
-
 #include <iostream>
 
-void rest(Pilot& pilot) {
-    pilot.fatigue -= 30;
-    if (pilot.fatigue < 0) {
-        pilot.fatigue = 0;
+// Constructor using an initialization list
+Pilot::Pilot(std::string name, int skill)
+    : name_(name), skill_(skill), fatigue_(0), missions_(0) {}
+
+void Pilot::rest() {
+    fatigue_ -= 30;
+    if (fatigue_ < 0) {
+        fatigue_ = 0;
     }
 }
 
-bool fly_mission(Pilot& pilot) {
-    if (pilot.fatigue > 80) {
+bool Pilot::fly_mission() {
+    if (fatigue_ > 80) {
         return false;
     }
-    pilot.fatigue += 20;
-    pilot.missions += 1;
+    fatigue_ += 20;
+    missions_ += 1;
     return true;
 }
 
-void print_pilot(const Pilot& pilot) {
-    std::cout << pilot.name << " | skill " << pilot.skill << " | fatigue "
-              << pilot.fatigue << " | missions " << pilot.missions << '\n';
+void Pilot::print() const {
+    std::cout << name_ << " | skill " << skill_ 
+              << " | fatigue " << fatigue_ 
+              << " | missions " << missions_ << "\n";
 }
+
+// Getters
+std::string Pilot::name() const { return name_; }
+int Pilot::skill() const { return skill_; }
+int Pilot::fatigue() const { return fatigue_; }
+int Pilot::missions() const { return missions_; }
