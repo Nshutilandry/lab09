@@ -9,10 +9,11 @@ bool save_roster(const std::vector<Mech>& roster, const std::string& path) {
     }
 
     for (const auto& mech : roster) {
-        file << mech.get_name() << ","
-             << mech.get_hp() << ","
-             << mech.get_attack() << ","
-             << mech.get_armor() << "\n";
+        // Use name(), hp(), attack(), and armor() without 'get_'
+        file << mech.name() << ","
+             << mech.hp() << ","
+             << mech.attack() << ","
+             << mech.armor() << "\n";
     }
 
     return true;
@@ -58,7 +59,7 @@ bool load_roster(const std::string& path, std::vector<Mech>& roster, int& skippe
             continue;
         }
 
-        // Validate numeric fields safely using string streams (no std::stoi)
+        // Validate numeric fields safely using string streams
         int hp = 0, attack = -1, armor = -1;
         std::stringstream hp_ss(hp_str);
         std::stringstream att_ss(attack_str);
