@@ -17,6 +17,10 @@ public:
     bool fly_mission();
     void print() const;
 
+    // Mutators / Invariant checks
+    bool set_name(const std::string& name);
+    void change_skill(int change);
+
     // Const Getters
     std::string name() const;
     int skill() const;
