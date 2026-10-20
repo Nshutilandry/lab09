@@ -9,7 +9,6 @@ bool save_roster(const std::vector<Mech>& roster, const std::string& path) {
     }
 
     for (const auto& mech : roster) {
-        // Use name(), hp(), attack(), and armor() without 'get_'
         file << mech.name() << ","
              << mech.hp() << ","
              << mech.attack() << ","
