@@ -1,89 +1,97 @@
 #include "roster_io.h"
-
 #include <fstream>
 #include <sstream>
 
-namespace {
+bool save_roster(const std::vector<Mech>& roster, const std::string& path) {
+    std::ofstream file(path);
+    if (!file.is_open()) {
+        return false;
+    }
 
-/// Parses text as a whole number. Rejects empty text and trailing characters.
-bool parse_int(const std::string& text, int& value) {
-    std::istringstream in(text);
-    int parsed = 0;
-    if (in >> parsed && (in >> std::ws).eof()) {
-        value = parsed;
-        return true;
+    for (const auto& mech : roster) {
+        file << mech.get_name() << ","
+             << mech.get_hp() << ","
+             << mech.get_attack() << ","
+             << mech.get_armor() << "\n";
     }
-    return false;
-}
 
-/// Turns one line into a Mech. Returns false if the line breaks the file format.
-bool parse_mech(const std::string& line, Mech& mech) {
-    std::vector<std::string> fields;
-    std::istringstream in(line);
-    std::string field;
-    while (std::getline(in, field, ',')) {
-        fields.push_back(field);
-    }
-    if (!line.empty() && line.back() == ',') {
-        fields.push_back("");  // getline drops a trailing empty field
-    }
-    if (fields.size() != 4 || fields[0].empty()) {
-        return false;
-    }
-    int hp = 0;
-    int attack = 0;
-    int armor = 0;
-    if (!parse_int(fields[1], hp) || !parse_int(fields[2], attack) ||
-        !parse_int(fields[3], armor)) {
-        return false;
-    }
-    if (hp < 1 || attack < 0 || armor < 0) {
-        return false;
-    }
-    mech = Mech(fields[0], hp, attack, armor);
     return true;
 }
 
-}  // namespace
-
-bool save_roster(const std::vector<Mech>& roster, const std::string& path) {
-    std::ofstream out(path);
-    if (!out) {
-        return false;
-    }
-    for (const Mech& mech : roster) {
-        out << mech.name() << ',' << mech.hp() << ',' << mech.attack() << ','
-            << mech.armor() << '\n';
-    }
-    return static_cast<bool>(out);
-}
-
 bool load_roster(const std::string& path, std::vector<Mech>& roster, int& skipped_lines) {
-    std::ifstream in(path);
-    if (!in) {
-        return false;
+    std::ifstream file(path);
+    if (!file.is_open()) {
+        return false; // Missing file leaves roster untouched
     }
-    std::vector<Mech> loaded;
-    int skipped = 0;
+
+    std::vector<Mech> temp_roster;
+    int bad_lines = 0;
     std::string line;
-    while (std::getline(in, line)) {
-        Mech mech("", 1, 0, 0);
-        if (parse_mech(line, mech)) {
-            loaded.push_back(mech);
-        } else {
-            ++skipped;
+
+    while (std::getline(file, line)) {
+        if (line.empty()) {
+            bad_lines++;
+            continue;
         }
+
+        std::stringstream ss(line);
+        std::string name_str, hp_str, attack_str, armor_str, extra_str;
+
+        // Must have exactly 4 comma-separated fields
+        if (!std::getline(ss, name_str, ',') ||
+            !std::getline(ss, hp_str, ',') ||
+            !std::getline(ss, attack_str, ',') ||
+            !std::getline(ss, armor_str, ',')) {
+            bad_lines++;
+            continue;
+        }
+
+        // Check for extra trailing fields/text
+        if (ss >> extra_str) {
+            bad_lines++;
+            continue;
+        }
+
+        // Name cannot be empty
+        if (name_str.empty()) {
+            bad_lines++;
+            continue;
+        }
+
+        // Validate numeric fields safely using string streams (no std::stoi)
+        int hp = 0, attack = -1, armor = -1;
+        std::stringstream hp_ss(hp_str);
+        std::stringstream att_ss(attack_str);
+        std::stringstream arm_ss(armor_str);
+        char extra_char = '\0';
+
+        if (!(hp_ss >> hp) || (hp_ss >> extra_char) || hp < 1) {
+            bad_lines++;
+            continue;
+        }
+        if (!(att_ss >> attack) || (att_ss >> extra_char) || attack < 0) {
+            bad_lines++;
+            continue;
+        }
+        if (!(arm_ss >> armor) || (arm_ss >> extra_char) || armor < 0) {
+            bad_lines++;
+            continue;
+        }
+
+        temp_roster.emplace_back(name_str, hp, attack, armor);
     }
-    roster = loaded;
-    skipped_lines = skipped;
+
+    roster = std::move(temp_roster);
+    skipped_lines = bad_lines;
     return true;
 }
 
 bool append_line(const std::string& path, const std::string& text) {
-    std::ofstream out(path, std::ios::app);
-    if (!out) {
+    std::ofstream file(path, std::ios::app);
+    if (!file.is_open()) {
         return false;
     }
-    out << text << '\n';
-    return static_cast<bool>(out);
+
+    file << text << "\n";
+    return true;
 }

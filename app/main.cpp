@@ -1,9 +1,9 @@
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <vector>
 
 #include "battle_sim.h"
-#include "input.h"
 #include "mech.h"
 #include "pilot_menu.h"
 #include "roster_io.h"
@@ -17,6 +17,25 @@ namespace {
 const std::string roster_path = std::string(HANGAR_DATA_DIR) + "/roster.csv";
 const std::string battle_log_path = std::string(HANGAR_DATA_DIR) + "/battle_log.txt";
 const std::string graveyard_path = std::string(HANGAR_DATA_DIR) + "/graveyard.txt";
+
+/// Prompts until the user enters a whole number in [low, high].
+/// Returns false if input ends (Ctrl-D) before a valid number is entered.
+bool read_int(const std::string& prompt, int low, int high, int& result) {
+    std::string line;
+    while (true) {
+        std::cout << prompt;
+        if (!std::getline(std::cin, line)) {
+            return false;
+        }
+        std::istringstream in(line);
+        int value = 0;
+        if (in >> value && (in >> std::ws).eof() && value >= low && value <= high) {
+            result = value;
+            return true;
+        }
+        std::cout << "Enter a number from " << low << " to " << high << ".\n";
+    }
+}
 
 void print_menu() {
     std::cout << "\n=== MECH HANGAR ===\n"
@@ -45,8 +64,16 @@ void print_roster(const std::vector<Mech>& roster) {
 int main() {
     std::vector<Mech> roster;
     std::vector<Pilot> pilots;
-    roster.push_back(make_random_mech());
-    roster.push_back(make_random_mech());
+
+    // STRETCH: Try to automatically load the roster when the program starts.
+    // If the file doesn't exist yet, it leaves default starting mechs.
+    int initial_skipped = 0;
+    if (load_roster(roster_path, roster, initial_skipped)) {
+        std::cout << "Auto-loaded " << roster.size() << " mechs from " << roster_path << ".\n";
+    } else {
+        roster.push_back(make_random_mech());
+        roster.push_back(make_random_mech());
+    }
 
     while (true) {
         print_menu();
@@ -64,6 +91,7 @@ int main() {
             roster.back().print();
 
         } else if (choice == 3) {
+            // Checkpoint 1: Save roster
             if (save_roster(roster, roster_path)) {
                 std::cout << "Roster saved.\n";
             } else {
@@ -71,6 +99,7 @@ int main() {
             }
 
         } else if (choice == 4) {
+            // Checkpoints 2 & 3: Load roster with bad line tolerance
             int skipped = 0;
             if (load_roster(roster_path, roster, skipped)) {
                 std::cout << "Loaded " << roster.size() << " mechs (" << skipped
@@ -97,9 +126,12 @@ int main() {
             DuelResult result = simulate_duel(fighter, challenger);
             std::cout << result.summary << '\n';
 
+            // Checkpoint 4a: Append a timestamped line to the battle log
             if (!append_line(battle_log_path, timestamp() + " " + result.summary)) {
                 std::cout << "Warning: could not write the battle log.\n";
             }
+
+            // Checkpoint 4b: Handle destruction / graveyard tracking
             if (fighter.is_destroyed()) {
                 std::string epitaph = timestamp() + " " + fighter.name() +
                                       " was destroyed by " + result.opponent_name;
@@ -113,6 +145,16 @@ int main() {
             run_pilot_menu(pilots);
 
         } else {
+            // Stretch: Ask whether to save the roster before quitting
+            std::string save_choice;
+            std::cout << "Save roster before quitting? (y/n): ";
+            if (std::getline(std::cin, save_choice) && !save_choice.empty() && (save_choice[0] == 'y' || save_choice[0] == 'Y')) {
+                if (save_roster(roster, roster_path)) {
+                    std::cout << "Roster saved.\n";
+                } else {
+                    std::cout << "Could not write " << roster_path << ".\n";
+                }
+            }
             break;
         }
     }
